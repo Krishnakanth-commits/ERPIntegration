@@ -32,5 +32,6 @@
     </flow>
     <flow name="get:\ProductCreation:erpintegrationdb-config">
         <flow-ref doc:name="Calling productcreation Flow" doc:id="53443d10-e027-4bb2-aeee-d133c7105d7e" name="productcreationFlow"/>
+		<logger level="INFO" doc:name="Logger" doc:id="345609a3-110d-468f-b177-b55ee0496296" message="#[payload]"/>
     </flow>
 </mule>
