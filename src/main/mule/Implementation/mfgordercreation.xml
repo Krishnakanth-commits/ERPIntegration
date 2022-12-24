@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<db:config name="Database_Config_mfgorder" doc:name="Database Config" doc:id="232e7efe-dcb5-4622-bcde-dc44f29a596a" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<http:request-config name="HTTP_Request_configuration_mfgorder" doc:name="HTTP Request configuration" doc:id="16eebc8e-d6de-48ac-9b28-47c3494af065" basePath="${https.mfgorder.basepath}" >
+		<http:request-connection protocol="HTTPS" host="${https.mfgorder.host}" port="${https.mfgorder.port}" >
+			<tls:context >
+				<tls:trust-store path="keystore/truststore" password="keystorepass" insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="6d37bc35-cbd0-4837-9d5e-813916ea85b4" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config1" doc:name="Database Config" doc:id="f62bb61d-d9c3-4efe-bbcc-6e373daaf911" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_faildata" doc:name="Database Config" doc:id="bbfa9b91-0bc8-48ce-90fe-b2e918649dba" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_failed_data" doc:name="Database Config" doc:id="5ccbc6be-d735-41e7-96d5-56da747a62f9" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_bulk" doc:name="Database Config" doc:id="6998cb9d-4d4f-46e9-92d1-12a4e767c872" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_success_update" doc:name="Database Config" doc:id="ea89bb4f-d822-4e02-a8b8-6c48dbbf4108" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_for_Updating_mfgOrder" doc:name="Database Config" doc:id="093fb4bd-e5be-4bb5-b0a5-faec11e9ac64" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<http:request-config name="HTTP_Request_configuration_for_mfgupdate" doc:name="HTTP Request configuration" doc:id="51155b0c-bc97-4aa9-910a-b4a5edff2768" basePath="${https.mfgorder.basepath}">
+		<http:request-connection protocol="HTTPS" host="${https.mfgorder.host}" port="${https.mfgorder.port}" >
+			<tls:context >
+				<tls:trust-store path="keystore/truststore" password="keystorepass" insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<flow name="mfgordercreationFlow" doc:id="eafe8e4b-0f2b-4a29-98b8-951395466436" >
+		<db:select doc:name="Retriving MfgOrder Data from DB" doc:id="a4c80558-03fa-4353-bd3e-fc238d73dc7d" config-ref="Database_Config_mfgorder">
+			<db:sql><![CDATA[select * from tbl_MfgOrdersStaging where status in ('New','Fail')]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Converting Table Data Into Json Format" doc:id="fcc551b3-d65f-4673-a3f7-6e5807f26c69">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	"Name": payload01.OrderName,
+	"Description": payload01.OrderDescription,
+	"OrderType": {
+    "Name": payload01.OrderTypeName
+  },
+  "ReportingFactory": {
+    "name": payload01.ReportingFactoryName
+  },
+  "MaterialList": [
+    {
+      "QtyRequired": payload01.MLQtyRequired,
+      "IssueControl": payload01.MLIssueControl,
+      "Product": {
+        "Name": payload01.MLProductName,
+        "Revision": payload01.MLProductRevision
+      }
+    }
+  ]
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="25e27bca-82d8-4702-9ea3-f3c07049a5bc" >
+			<try doc:name="Try" doc:id="e31343ca-e41c-4ced-86cb-5f2255c4c7a1" >
+				<db:update doc:name="Updating Status as InProgress in DB" doc:id="0b84a207-cd10-4994-9b95-ec459f69da65" config-ref="Database_Config1">
+			<db:sql><![CDATA[update tbl_MfgOrdersStaging set status='InProgress' where ordername=:name]]></db:sql>
+			<db:input-parameters><![CDATA[#[output application/json
+---
+"name" : payload.Name]]]></db:input-parameters>
+		</db:update>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d1c00f77-29b9-45fb-b27c-ab4d5e1b0728" type="ANY"/>
+				</error-handler>
+			</try>
+		</foreach>
+		<set-variable value="#[[]]" doc:name="Success Summary Data" doc:id="740a9da0-e033-4223-9ceb-db707a0d8b3b" variableName="Successfuldata"/>
+		<set-variable value="#[[]]" doc:name="Updated Summary Data" doc:id="ad9ac149-71a7-45be-a418-5151c1ffb6b4" variableName="updatedata"/>
+		<set-variable value="#[[]]" doc:name="Fail Summary Data" doc:id="91e4ce30-0423-4198-956c-946594c883b3" variableName="failuredata"/>
+		<foreach doc:name="For Each" doc:id="f5b5a133-b542-4596-8d31-5d0dd342918a" >
+			<try doc:name="Try" doc:id="6197fb91-f821-4c80-8152-f984cd194d45" >
+				<logger level="INFO" doc:name="Before API Request Logger" doc:id="2c21aaa4-f136-4ef8-a3c8-3627946902c6" message="#[payload]" />
+				<http:request method="POST" doc:name="Sending the Mfg order Json data to Opcenter" doc:id="58e4bb1f-9953-4ee7-a72c-20e8653263ac" config-ref="HTTP_Request_configuration_mfgorder" path="${https.mfgorder.path}">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"${headers.key}" : "${headers.value}"
+}]]]></http:headers>
+			</http:request>
+				<set-variable value="#[output application/json &#10;---&#10;vars.Successfuldata + payload]" doc:name="Success Data" doc:id="fbac057a-1fb3-4a9e-b61c-7532b2964bab" variableName="Successfuldata" />
+				<db:update doc:name="Updating Status as Success in DB" doc:id="4fc78424-1c5a-4b78-88c9-89ff1508b9b1" config-ref="Database_Config_success_update">
+					<db:sql><![CDATA[update tbl_MfgOrdersStaging set status='Success' where ordername=:name]]></db:sql>
+					<db:input-parameters><![CDATA[#[%dw 2.0
+import * from dw::core::Strings
+output application/json
+---
+"name" : [payload.value splitBy  ("\"")][0][1]]]]></db:input-parameters>
+				</db:update>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="eeddf678-6817-484d-8d03-4e4815f67c62" type="ANY">
+						<logger level="INFO" doc:name="Failure Data Logger" doc:id="1d11fe8d-4c34-4111-8ef0-cb0417161221" />
+						<choice doc:name="Choice" doc:id="93b253b4-a714-4073-a5fb-5bdcb2cddd4c" >
+							<when expression='#[error.errorMessage.payload.ErrorCode=="13500631"]'>
+								<logger level="INFO" doc:name="Logger" doc:id="b17349a5-e954-438a-bfce-5c8f8509ff86" message="Update flow called"/>
+								<http:request method="PUT" doc:name="Sending the Mfg Order data to update in Opcenter" doc:id="8ace96e2-2c9c-4a3f-8f0f-8926974c28db" config-ref="HTTP_Request_configuration_for_mfgupdate" path="${https.mfgupdate.path}">
+									<http:headers ><![CDATA[#[output application/java
+---
+{
+	"${headers.key}" : "${headers.value}"
+}]]]></http:headers>
+									<http:uri-params ><![CDATA[#[{
+"OrderName" : payload.Name
+}]]]></http:uri-params>
+								</http:request>
+								<set-variable value="#[output application/json&#10;---&#10;vars.updatedata + payload]" doc:name="Success Updated Data" doc:id="a480b7c9-cf86-4784-888d-997588907077" variableName="updatedata"/>
+								<db:update doc:name="Updating Mfg Order status as Updated in DB" doc:id="383db371-f7a8-4e50-8008-4984844d44c7" config-ref="Database_Config_for_Updating_mfgOrder">
+									<db:sql ><![CDATA[update tbl_MfgOrdersStaging set status='Updated' where ordername=:name]]></db:sql>
+									<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/json
+---
+"name":(payload.value splitBy  ("\""))[1]]]]></db:input-parameters>
+								</db:update>
+							</when>
+							<otherwise >
+								<set-variable value="#[output application/json 
+---
+vars.failuredata + [{OrderName : payload.Name,ErrorMessage : error.muleMessage.typedValue.Details[0][1]}]]" doc:name="Failed Data" doc:id="fa9e0dce-ebc1-46a1-9681-f8a10ea240c4" variableName="failuredata" />
+								<db:update doc:name="Updating Status as Fail in DB" doc:id="71384dae-625f-45d6-bc68-0c6617106cb1" config-ref="Database_Config_failed_data">
+				<db:sql><![CDATA[update tbl_MfgOrdersStaging set status='Fail' where ordername=:name]]></db:sql>
+						<db:input-parameters><![CDATA[#[output application/json
+---
+"name":payload.Name]]]></db:input-parameters>
+			</db:update>
+							</otherwise>
+						</choice>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+		<ee:transform doc:name="Response Summary" doc:id="3cf6092c-4cd0-4181-ab1c-e55f89cee86d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Actualpayload : OrderName :payload.Name,
+	SuccessRecords : OrderName : vars.Successfuldata,
+	UpdatedRecords : vars.updatedata,
+	FailedRecords : Errors : vars.failuredata
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Summary Logger" doc:id="ac4105a4-dd98-4971-bac2-0b2fc817285e" message="#[payload]"/>
+		<error-handler ref="global-error-handler" />
+	</flow>
+</mule>

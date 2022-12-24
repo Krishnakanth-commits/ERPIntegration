@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<db:config name="Database_Config_for_Product" doc:name="Database Config" doc:id="3251814b-e935-4f8a-a28d-34dd66ea938d" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<http:request-config name="HTTP_Request_For_configuration_Product" doc:name="HTTP Request configuration" doc:id="e4231f30-ba68-49a1-9b97-205bfcc8c380" basePath="${https.product.basepath}" >
+		<http:request-connection protocol="HTTPS" host="${https.product.host}" port="${https.product.port}" >
+			<tls:context >
+				<tls:trust-store path="keystore/truststore" password="keystorepass" insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<db:config name="Database_Config_For_success_status" doc:name="Database Config" doc:id="e2b9fca3-9da1-4b9e-ab38-3408832cd69e" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_Product_Fail_status" doc:name="Database Config" doc:id="b843a49e-3b0b-4dd6-a82f-5312fe9a237c" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_for_Updating_Product_InProgress" doc:name="Database Config" doc:id="c7af1792-35e7-46b1-803f-8acf47e097c9" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_For_Updating_product" doc:name="Database Config" doc:id="9b7de48f-9d54-46e2-8054-5b4ef2cece23" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<http:request-config name="HTTP_Request_For_configuration_for_product" doc:name="HTTP Request configuration" doc:id="ba0048ef-3217-484a-814f-80465597566e" basePath="${https.mfgorder.basepath}">
+		<http:request-connection protocol="HTTPS" host="${https.mfgorder.host}" port="${https.mfgorder.port}" >
+			<tls:context >
+				<tls:trust-store path="keystore/truststore" password="keystorepass" insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<flow name="productcreationFlow" doc:id="ca59cde6-237c-457a-b718-c23a42c6b4ea" >
+		<db:select doc:name="Retriving the Product Data from DB" doc:id="7d3ecaec-e889-4e23-9ed4-d8de99f8625b" config-ref="Database_Config_for_Product">
+			<db:sql ><![CDATA[select * from tbl_ProductStaging where Status in ('New','Fail')]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Converting Table Data into Json format" doc:id="46ed558e-80ab-4945-be83-6619e9e9eb0f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+  "Name": payload01.ProductName,
+  "Description": payload01.OrderDescription,
+  "ERPProductFamily": payload01.ERPProductfamily,
+  "ProductType": {
+    "Name": payload01.ProductTypeName
+  },
+  "Revision": payload01.Revistion,
+  "StdStartUOM": {
+    "Name": payload01.UOMName
+  },
+  "isUOMConversion": [
+    {
+      "ConversionFactor": payload01.UOMConFactory,
+      "DecimalPlaces": payload01.UOMDecimalplace,
+      "FromUOM": {
+        "Name": payload01.FromUOMName
+      },
+      "RoundingRule": payload01.RoundingRule,
+      "ToUOM": {
+        "Name": payload01.ToUOMName
+      }
+    }
+  ]
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="f8af379b-e34a-4219-b0ea-6186e18f18f7" >
+			<try doc:name="Try" doc:id="1c7559f4-80a6-44ea-9f2a-7e9a8f74c408" >
+				<db:update doc:name="Updating Status as InProgress in DB" doc:id="c3eec448-55f6-46e1-b5e3-432b9cd62c8a" config-ref="Database_Config_for_Updating_Product_InProgress">
+					<db:sql ><![CDATA[update tbl_ProductStaging set status='InProgress' where ProductName=:name]]></db:sql>
+					<db:input-parameters ><![CDATA[#[output application/json
+---
+"name" : payload.Name]]]></db:input-parameters>
+				</db:update>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="036de623-477e-414d-95dc-f8d63a517be5" type="ANY"/>
+				</error-handler>
+			</try>
+		</foreach>
+		<set-variable value="#[[]]" doc:name="Success Summary Data" doc:id="3e0b6fdd-f056-49b9-ba6e-f019cebe4d7d" variableName="SuccessRecordValues"/>
+		<set-variable value="#[[]]" doc:name="Update Summary Data" doc:id="5b5be894-1760-48b8-99d0-0a10478c1c91" variableName="updatedata"/>
+		<set-variable value="#[[]]" doc:name="Fail Summary Data" doc:id="8493ee53-45a8-449d-8c7d-c38db60618f8" variableName="failures"/>
+		<foreach doc:name="For Each" doc:id="8f7eec5b-16d2-4d97-a997-3b0664d02ce5" >
+			<try doc:name="Try" doc:id="3c641d92-ca41-47aa-a9c8-f4ae498aa0c3">
+			<logger level="INFO" doc:name="Before API Request Logger" doc:id="2df89327-102c-4957-82d5-35bb1de4c707" message="#[payload]" />
+				<http:request method="POST" doc:name="Sending the Product Json data to Opcenter" doc:id="6f6ff51e-630d-4b81-aba6-a8a2f5674ba6" config-ref="HTTP_Request_For_configuration_Product" path="${https.product.path}">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"${headers.key}" : "${headers.value}"
+}]]]></http:headers>
+			</http:request>
+				<set-variable value="#[output application/json --- vars.SuccessRecordValues + payload]" doc:name="Success Data" doc:id="dc705d77-fdc9-43e9-9452-a22fe495b523" variableName="SuccessRecordValues" />
+				<db:update doc:name="Updating Status as Success in DB" doc:id="b9661010-4952-4ddc-ad1a-42370da15410" config-ref="Database_Config_For_success_status">
+					<db:sql><![CDATA[update tbl_ProductStaging set status='Success' where ProductName=:name]]></db:sql>
+					<db:input-parameters><![CDATA[#[%dw 2.0
+import * from dw::core::Strings
+output application/json
+---
+"name" : [[payload.value splitBy  ("\"")][0][1] splitBy  (" ")][0][0]]]]></db:input-parameters>
+				</db:update>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="aa27f9e4-ebac-4b2e-9f23-25161a42c59d" >
+						<logger level="INFO" doc:name="Failure Data Logger" doc:id="c44373e6-d911-49a1-9222-c4e9ded4d705" message="Error Occured Continuing the process..." />
+						<choice doc:name="Choice" doc:id="f087ea36-1273-4c27-9a19-50e81e008dfc" >
+							<when expression='#[error.errorMessage.payload.ErrorCode=="13500631"]'>
+								<logger level="INFO" doc:name="Logger" doc:id="4fb54f68-0c4f-4514-9280-0742e56bfc3b" message="Update flow called"/>
+								<http:request method="PUT" doc:name="Sending the Mfg Order data to update in Opcenter" doc:id="78d5d09d-1d9b-45ba-bb65-c240585f8b3c" config-ref="HTTP_Request_For_configuration_for_product" path="${https.productupdate.path}">
+									<http:headers ><![CDATA[#[output application/java
+---
+{
+	"${headers.key}" : "${headers.value}"
+}]]]></http:headers>
+									<http:uri-params ><![CDATA[#[{
+"ProductName" : payload.Name
+}]]]></http:uri-params>
+								</http:request>
+								<set-variable value="#[output application/json&#10;---&#10;vars.updatedata + payload]" doc:name="Updated Data" doc:id="c8a373f5-9169-4f19-81db-4160f0232a8e" variableName="updatedata"/>
+								<db:update doc:name="Updating Product status as Updated in DB" doc:id="6bb92484-10d1-409a-b5ac-633c5fc65fe1" config-ref="Database_Config_For_Updating_product">
+									<db:sql ><![CDATA[update tbl_ProductStaging set status='Updated' where ProductName=:name]]></db:sql>
+									<db:input-parameters ><![CDATA[#[%dw 2.0
+output application/json
+---
+"name": ((payload.value splitBy  " ")[1] splitBy  "\"")[1]]]]></db:input-parameters>
+								</db:update>
+							</when>
+							<otherwise >
+								<set-variable value="#[output application/json &#10;---&#10;vars.failures + [{ProductName : payload.Name,ErrorMessage : error.muleMessage.typedValue.Details[0][1]}]]" doc:name="Failed Data" doc:id="b99bd296-ca66-41e2-950b-f047047ad56a" variableName="failuredata" />
+								<db:update doc:name="Updating Status as Fail in DB" doc:id="02bc37f0-36e8-4cd6-bd72-a8481db38c98" config-ref="Database_Config_failed_data">
+				<db:sql><![CDATA[update tbl_ProductStaging set status='Fail' where ProductName=:name]]></db:sql>
+						<db:input-parameters><![CDATA[#[output application/json
+---
+"name":payload.Name]]]></db:input-parameters>
+			</db:update>
+							</otherwise>
+						</choice>
+				</on-error-continue>
+				</error-handler>
+		</try>
+		</foreach>
+		<ee:transform doc:name="Response Summary" doc:id="3d7fc005-bdb8-43f7-9d43-df80c17eaeb0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Actualpayload : ProductName :payload.Name,
+	SuccessRecords : ProductName : vars.SuccessRecordValues,
+	UpdatedRecords : vars.updatedata,
+	FailedRecords : ErrorMessage : vars.failures
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Summary Logger" doc:id="05ba7a5e-afe0-4b02-82bc-24072adbb7f0" message="#[message]" />
+		<error-handler ref="global-error-handler" />
+	</flow>
+</mule>
