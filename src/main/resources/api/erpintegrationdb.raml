@@ -1,0 +1,36 @@
+#%RAML 1.0
+title: ERPIntegrationDB
+baseUri: http://localhost/erp
+description: ERP Integration DB to Opcenter
+
+/ProductCreation:
+  get:
+    description: Getting the Product data from DB and sending it to Opcenter
+    responses:
+      200:
+        body:
+          application/json:
+            
+/MfgOrderCreation:
+  get:
+    description: Getting the MfgOrder data from DB and sending it to Opcenter
+    responses:
+      200:
+        body:
+          application/json:
+
+/MatLotCreation:
+  get:
+    description: Getting the Material Lot data from DB and sending it to Opcenter
+    responses:
+      200:
+        body:
+          application/json:
+
+/MilestoneStepCompletion:
+  get:
+    description: Getting the Material Lot data from DB and sending it to Opcenter
+    responses:
+      200:
+        body:
+          application/json:

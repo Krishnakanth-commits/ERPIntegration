@@ -1,0 +1,62 @@
+http:
+  listener:
+    host: "localhost"
+    port: "8082"
+    basepath: "/"
+    path: "ERPIntegration/*"
+    
+https:
+  mfgorder:
+    host: "192.168.1.83"
+    path: "/MfgOrders"
+    port: "443"
+    basepath: "/modeling/api"
+    
+  mfgupdate:
+    path: "/MfgOrders/{OrderName}"
+    port: "443"
+    basepath: "/modeling/api"
+  
+  product:
+    host: "192.168.1.83"
+    path: "/Products"
+    port: "443"
+    basepath: "/modeling/api"
+  productupdate:
+    path: "/Products/{ProductName}"
+  material:
+    host: "192.168.1.83"
+    path: "/Start"
+    port: "443"
+    basepath: "/shopfloor/api"
+
+database:
+  sqlserver:
+    host: "192.168.1.84"
+    port: "1433"
+    username: "sa"
+    password: "dts@123"
+    database: "ERPIntegrationDB"
+    
+  opcenter:
+    host: "192.168.1.83"
+    port: "1433"
+    username: "sa"
+    password: "dts@123"
+    database: "Opcenterel_2022"
+    
+keystore:
+    keystorename: "keystore/keystore"
+    keystorepassword: "keystorepass"
+    trusttorename: "keystore/truststore"
+    truststorepassword: "keystorepass"
+    
+environment:
+    name:"env"
+    value:"dev"
+
+headers:
+    key: "Authorization"
+    value: "Bearer ewoiVXNlck5hbWUiOiAiZGhydXYxIiwKIlBhc3N3b3JkIjogewoiSXNFbmNyeXB0ZWQiOiB0cnVlLAoiVmFsdWUiOiAiNWE1ZmY1MDY3ODVlMWNlMjY5ZmE0Y2NkYzQ1ZGU5ZjAiCn0sCiJVdGNPZmZzZXQiOiAiLTAwOjAwOjAwIgp9"
+    
+    

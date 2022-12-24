@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<db:config name="Database_Config_Milestorestep_Opcenter" doc:name="Database Config" doc:id="fe478074-3685-4a9f-9d82-a4c87320a879" >
+		<db:mssql-connection host="${database.opcenter.host}" port="${database.opcenter.port}" user="${database.opcenter.username}" password="${database.opcenter.password}" databaseName="${database.opcenter.database}" />
+	</db:config>
+	<db:config name="Database_Config_inserting_milestonestep_data" doc:name="Database Config" doc:id="7d5eb299-991b-4acb-aa77-990b1c7d744a" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config2_milstonestepinsertion" doc:name="Database Config" doc:id="81ce8ec9-c88f-45a2-a9da-0a0678e4d255" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<flow name="milestonestepcompletionFlow" doc:id="c1fe1c90-6fbb-4468-a450-985417693ecc" >
+		<db:select doc:name="Retriving Milestone Step Completion data from Opcenter DB" doc:id="ad2e9f87-bd07-4fb1-9b2f-dc2f6b382898" config-ref="Database_Config_Milestorestep_Opcenter">
+			<db:sql ><![CDATA[select  'AAA' as 'Plant',
+	'111' as 'Production_Order_No',
+	'112' as 'Operation_No',
+	'113' as 'Confirmation_No',
+	'114' as 'Batch_No',
+	'FFF' as 'Scrap_Information',
+	'GGG' as 'Yield Information',
+	'HHH' as 'UoM',
+	'JJJ' as 'Clear_Reservation',
+	'Y' as 'Final Confirmation',
+	'JJJ' as 'Text',
+	'8' as 'Labor_Hours',
+	'12' as 'Machine_Hours',
+	'115' as 'Operator_ID',
+	'NNN' as 'Movement_Type',
+	'OOO' as 'Storage_Location',
+	'116' as 'Material_Number_No',
+	'117' as 'Quantity',
+	'118' as 'Pallet_ID',
+	GETDATE() as 'Date_Timestamp' union all 
+
+select  'AAA' as 'Plant',
+	'111' as 'Production_Order_No',
+	'112' as 'Operation_No',
+	'113' as 'Confirmation_No',
+	'114' as 'Batch_No',
+	'FFF' as 'Scrap_Information',
+	'GGG' as 'Yield Information',
+	'HHH' as 'UoM',
+	'JJJ' as 'Clear_Reservation',
+	'Y' as 'Final Confirmation',
+	'JJJ' as 'Text',
+	'8' as 'Labor_Hours',
+	'12' as 'Machine_Hours',
+	'115' as 'Operator_ID',
+	'NNN' as 'Movement_Type',
+	'OOO' as 'Storage_Location',
+	'116' as 'Material_Number_No',
+	'117' as 'Quantity',
+	'118' as 'Pallet_ID',
+	GETDATE() as 'Date_Timestamp']]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Converting Table Data into Json Format" doc:id="ac55e86b-1106-4b84-b557-bd513cd21807" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+	"plant": payload01.Plant,
+	"production_order_no": payload01.Production_Order_No,
+    "Operation_no": payload01.Operation_No,
+	"confirmation_no":payload01.Confirmation_No,
+	"batch_no":payload01.Batch_No,
+	"scrap_information":payload01.Scrap_Information,
+	"yield_information":payload01.Yield_Information,
+	"uom":payload01.UoM,
+	"clear_reservation":payload01.Clear_Reservation,
+	"final_confirmation":payload01.Final_Confirmation,
+	"text":payload01.Text,
+	"labor_hours":payload01.Labor_Hours,
+	"machine_hours" :payload01.Machine_Hours,
+	"operator_id":payload01.Operator_ID,
+	"movement_type":payload01.Movement_Type,
+	"storage_location":payload01.Storage_Location,
+	"material_number_no":payload01.Material_Number_No,
+	"quantity":payload01.Quantity,
+	"pallet_id":payload01.Pallet_ID,
+	"date_timestamp":payload01.Date_Timestamp	
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<set-variable value="#[[]]" doc:name="Success Data Summary" doc:id="aa009445-83e1-4d77-85a4-e9b124cf9bbf" variableName="SuccessResponse"/>
+		<set-variable value="#[[]]" doc:name="Fail Data Summary" doc:id="ec52719f-98d4-499f-91e4-0e37eb29831a" variableName="FailData"/>
+		<foreach doc:name="For Each" doc:id="85e585b2-f37e-4f3b-a097-1d17dde18232" >
+			<try doc:name="Try" doc:id="a4d75042-51ee-489d-bea2-08e5c7e9d34b" >
+				<logger level="INFO" doc:name="Before inserting Logger" doc:id="8ce8a318-da55-4599-a190-5d8e49230a2e" message="#[payload]"/>
+				<db:insert doc:name="Inserting MileStoneStepCompletion data into ERP DB" doc:id="b59b6a77-b1ab-496e-96b0-d12bad633ef8" config-ref="Database_Config2_milstonestepinsertion">
+					<db:sql ><![CDATA[INSERT INTO TBL_MILESTONESTEPCOMPLETIONSTAGING VALUES(
+:PLANT,
+:PRODUCTION_ORDER_NO,
+:OPERATION_NO,
+:CONFIRMATION_NO,
+:BATCH_NO,
+:SCRAP_INFORMATION,
+:YIELD_INFORMATION,
+:UOM,
+:CLEAR_RESERVATION,
+:FINAL_CONFIRMATION,
+:TEXT,
+:LABOR_HOURS,
+:MACHINE_HOURS,
+:OPERATOR_ID,
+:MOVEMENT_TYPE,
+:STORAGE_LOCATION,
+:MATERIAL_NUMBER_NO,
+:QUANTITY,
+:PALLET_ID,
+:DATE_TIMESTAMP
+)]]></db:sql>
+					<db:input-parameters ><![CDATA[#[output application/json
+---
+{
+"PLANT" : payload.plant,
+"PRODUCTION_ORDER_NO" : payload.production_order_no,
+"OPERATION_NO" : payload.Operation_no,
+"CONFIRMATION_NO" : payload.confirmation_no,
+"BATCH_NO" : payload.batch_no,
+"SCRAP_INFORMATION" : payload.scrap_information,
+"YIELD_INFORMATION" : payload.yield_information,
+"UOM" : payload.uom,
+"CLEAR_RESERVATION" : payload.clear_reservation,
+"FINAL_CONFIRMATION" : payload.final_confirmation,
+"TEXT" : payload.text,
+"LABOR_HOURS" : payload.labor_hours,
+"MACHINE_HOURS" : payload.machine_hours,
+"OPERATOR_ID" : payload.operator_id,
+"MOVEMENT_TYPE" : payload.movement_type,
+"STORAGE_LOCATION" : payload.storage_location,
+"MATERIAL_NUMBER_NO" : payload.material_number_no,
+"QUANTITY" : payload.quantity,
+"PALLET_ID" : payload.pallet_id,
+"DATE_TIMESTAMP" : payload.date_timestamp
+}]]]></db:input-parameters>
+				</db:insert>
+				<set-variable value="#[output application/json&#10;---&#10;vars.SuccessResponse + payload.affectedRows]" doc:name="Success Response From DB" doc:id="83bb4674-32ba-485e-8be0-22927766b2ac" variableName="SuccessResponse"/>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="28c39244-3c39-478c-bbf4-e068b33a2006" >
+						<logger level="INFO" doc:name="Failure Record Logger" doc:id="c88e7dbc-52d0-4e99-911b-b29f22fc8d59" message="#[payload]"/>
+						<set-variable value='#[output application/json&#10;---&#10;vars.FailData + [{Prod_Order_No : payload.production_order_no,Error: error.description}]]' doc:name="Failure Response From DB" doc:id="7ddb5ee4-61f2-4ec6-a00a-90efc54ce569" variableName="FailData"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+		<ee:transform doc:name="Response Summary" doc:id="60b89a60-2a8f-4fb9-8d58-e7a73a8ba795" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Success Data" : vars.SuccessResponse + "Records inserted Successfully",
+	"Fail Data" : vars.FailData
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Summary Logger" doc:id="d47e3b69-2f1a-4fbd-9678-bf9e04c72152" />
+	</flow>
+</mule>

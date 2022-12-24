@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<db:config name="Database_Config_Material_Lot" doc:name="Database Config" doc:id="ea181a9a-d7af-45e4-89fd-069622ba9694" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<http:request-config name="HTTP_Request_configuration_Material" doc:name="HTTP Request configuration" doc:id="e3279009-6d35-42f5-a6d6-a24d26cccabd" basePath="${https.material.basepath}" >
+		<http:request-connection protocol="HTTPS" host="${https.material.host}" port="${https.material.port}" >
+			<tls:context >
+				<tls:trust-store path="keystore/truststore" password="keystorepass" insecure="true" />
+			</tls:context>
+		</http:request-connection>
+	</http:request-config>
+	<db:config name="Database_Config_For_Material_Lot_Inprogress" doc:name="Database Config" doc:id="09fe22f4-d95b-48b7-8a61-27b226474d48" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_For_Updating_Fail_Material_lot" doc:name="Database Config" doc:id="598dc23a-f5c3-4e22-b2e3-bec2260b418a" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<db:config name="Database_Config_For_Success_Update_Material_Lot" doc:name="Database Config" doc:id="0a1f1191-1c60-48b6-b73b-f989a3d894b9" >
+		<db:mssql-connection host="${database.sqlserver.host}" port="${database.sqlserver.port}" user="${database.sqlserver.username}" password="${database.sqlserver.password}" databaseName="${database.sqlserver.database}" />
+	</db:config>
+	<flow name="materiallotcreationFlow" doc:id="e3e49994-7550-4e7c-ba47-4b25c7110cde" >
+		<db:select doc:name="Retriving Material Lot data from Database" doc:id="0a19fe01-abcd-49c7-83d5-44999d0df745" config-ref="Database_Config_Material_Lot">
+			<db:sql ><![CDATA[select * from tbl_MaterialLotStaging where Status in ('New','Fail')]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Converrting Table data into Json Format" doc:id="5472c582-e861-4f38-8e69-6a9e07f0f91a">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+"CurrentStatusDetails": {
+          "Workflow": {
+            "name": payload01.WorkflowName,
+            "useROR": payload01.WorkflowROR
+          }
+        },
+        "Details": {
+          
+          "ContainerName": payload01.ContainerName,
+          
+          "Level": {
+            "name": payload01.LevelName
+          },
+          "MfgOrder": {
+            "name": payload01.MfgOrderName
+          },
+          "Owner": {
+            "name": payload01.OwnerName
+          },
+          "PriorityCode": {
+            "name": payload01.PriorityCodeName
+          },
+          "Product": {
+            "name": payload01.ProductName,
+            "useROR": payload01.ProductUseROR
+          },
+          "Qty": payload01.Quantity,
+          "SamplingRequired": payload01.SamplingRequired,
+          "StartReason": {
+            "name": payload01.StartReasonName
+          },
+          "UOM": {
+            "name": payload01.UOMName
+          }
+        }
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="1e282212-937f-4902-ba69-7d2ed7372a81" >
+			<try doc:name="Try" doc:id="9dbfa3f6-6418-4362-8976-903546d56273" >
+				<db:update doc:name="Updating Status as InProgress in DB" doc:id="f752bc3d-7501-432b-868d-57b8863550f1" config-ref="Database_Config_For_Material_Lot_Inprogress">
+					<db:sql ><![CDATA[update tbl_MaterialLotStaging set status='InProgress' where ContainerName=:Name]]></db:sql>
+					<db:input-parameters ><![CDATA[#[output application/json
+---
+"Name" : payload.Details.ContainerName]]]></db:input-parameters>
+				</db:update>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0c39b85a-d938-4183-9061-3881f52920cd" type="ANY"/>
+				</error-handler>
+			</try>
+		</foreach>
+		<set-variable value="#[[]]" doc:name="Success Summary Data" doc:id="66db452f-ccb6-46e5-8195-ddc495e5609e" variableName="Successmaterialdata"/>
+		<set-variable value="#[[]]" doc:name="Fail Summary Data" doc:id="9bd747ff-09bc-4f05-a695-d3244c6b6c7c" variableName="Failurematerialdata"/>
+		<foreach doc:name="For Each" doc:id="5023a44a-bdc6-415d-95d6-2d72f183bcb1" >
+			<try doc:name="Try" doc:id="b47d3838-7191-4796-8fd8-171b7c901ee6" >
+				<logger level="INFO" doc:name="Before API Reequest Logger" doc:id="21028cbe-46c5-43e5-8b79-b9ea4a0e6a69" message="#[payload]" />
+				<http:request method="POST" doc:name="Sending the Material Lot Json data to Opcenter" doc:id="4b7bbab5-0033-4aa6-ad19-a681259eca1e" config-ref="HTTP_Request_configuration_Material" path="${https.material.path}">
+				<http:headers><![CDATA[#[output application/java
+---
+{
+	"${headers.key}" : "${headers.value}"
+}]]]></http:headers>
+			</http:request>
+				<set-variable value="#[output application/json&#10;---&#10;vars.Successmaterialdata + payload]" doc:name="Success Payload" doc:id="66d663f4-733e-4283-bde1-99a36cac6cd5" variableName="Successmaterialdata"/>
+				<db:update doc:name="Updating Status as Success in DB" doc:id="5b1a09e9-2a2b-4865-b2dc-25e2d9ec11bc" config-ref="Database_Config_For_Success_Update_Material_Lot">
+					<db:sql ><![CDATA[update tbl_MaterialLotStaging set status='Success' where ContainerName=:Name]]></db:sql>
+					<db:input-parameters ><![CDATA[#[%dw 2.0
+import * from dw::core::Strings
+output application/json
+---
+"Name" : [payload.value splitBy  (" ")][0][0]]]]></db:input-parameters>
+				</db:update>
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="fccf47e1-4a64-40d5-ad64-0dc8f46833a3" >
+						<logger level="INFO" doc:name="Failure Data Logger" doc:id="3794efb0-8afc-43af-9f99-3679a8799030" />
+						<set-variable value="#[output application/json &#10;---&#10;vars.Failurematerialdata + [{ContainerName : payload.Details.ContainerName,ErrorMessage : error.description}]]" doc:name="Failure Payload" doc:id="a048800a-7572-4227-8fa0-63c565fcf575" variableName="Failurematerialdata"/>
+						<db:update doc:name="Updating Status as Fail in DB" doc:id="2d06c799-a5b9-4f89-b621-e2845590da42" config-ref="Database_Config_For_Updating_Fail_Material_lot">
+							<db:sql ><![CDATA[update tbl_MaterialLotStaging set status='Fail' where ContainerName=:Name]]></db:sql>
+							<db:input-parameters ><![CDATA[#[output application/json
+---
+"Name":payload.Details.ContainerName]]]></db:input-parameters>
+						</db:update>
+					</on-error-continue>
+				</error-handler>
+			</try>
+		</foreach>
+		<ee:transform doc:name="Response Summary" doc:id="ac92bde5-01a6-416e-9c19-79bbdab01d30" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Processed_ContainerNames : ContainerName :payload.Details.ContainerName,
+	SuccessRecords : ContainerResponse : vars.Successmaterialdata,
+	FailedRecords : Errors : vars.Failurematerialdata
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Response Summary Logger" doc:id="a3bb1ead-106d-4576-9d4b-15cfd89a2a8b" />
+		<error-handler ref="global-error-handler" />
+	</flow>
+</mule>

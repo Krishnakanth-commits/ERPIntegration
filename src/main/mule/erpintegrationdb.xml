@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd ">
+    <http:listener-config name="erpintegrationdb-httpListenerConfig" basePath="${http.listener.basepath}">
+        <http:listener-connection host="${http.listener.host}" port="${http.listener.port}" />
+    </http:listener-config>
+    <apikit:config name="erpintegrationdb-config" api="erpintegrationdb.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <configuration-properties doc:name="Configuration properties" doc:id="7e6803fb-4ce9-457e-86b4-ba1084a58ae4" file="properties\properties.yaml" />
+	<configuration doc:name="Configuration" doc:id="6acf3b21-130c-4fab-9911-853ae394459c" defaultErrorHandler-ref="global-error-handler" />
+	<flow name="erpintegrationdb-main">
+        <http:listener config-ref="erpintegrationdb-httpListenerConfig" path="${http.listener.path}">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="erpintegrationdb-config" />
+    </flow>
+    <flow name="get:\MatLotCreation:erpintegrationdb-config">
+        <flow-ref doc:name="Calling materiallot Flow" doc:id="deba6236-5947-498a-8b6b-efeaf741c723" name="materiallotcreationFlow"/>
+		<logger level="INFO"/>
+    </flow>
+    <flow name="get:\MfgOrderCreation:erpintegrationdb-config">
+        <flow-ref doc:name="Calling mfgordercreatioin Flow" doc:id="090e318c-8860-454e-827b-e968581e7400" name="mfgordercreationFlow"/>
+		<logger level="INFO" message="get:\MfgOrderCreation:erpintegrationdb-config" />
+    </flow>
+    <flow name="get:\MilestoneStepCompletion:erpintegrationdb-config" doc:id="e5dcb390-dc0b-43bc-af19-2be7cef52eb8">
+		<flow-ref doc:name="Calling Milestonestepcompletin Flow" doc:id="76c628f6-2c4d-45e3-a9f6-a63b2dd6541a" name="milestonestepcompletionFlow"/>
+		<logger level="INFO" message="get:\MilestoreStepCompletion:erpintegrationdb-config" />
+    </flow>
+    <flow name="get:\ProductCreation:erpintegrationdb-config">
+        <flow-ref doc:name="Calling productcreation Flow" doc:id="53443d10-e027-4bb2-aeee-d133c7105d7e" name="productcreationFlow"/>
+    </flow>
+</mule>
